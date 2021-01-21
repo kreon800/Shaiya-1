@@ -1,0 +1,158 @@
+[ENABLE]
+alloc(notice_hook,2048)
+alloc(ntcid_error,64)
+alloc(ntcn_error,64)
+alloc(ntcid_sent,64)
+alloc(ntcn_sent,64)
+//hooks CServerApp::OnConsoleCommand
+notice_hook:
+cmp eax,46
+je ntcid
+cmp eax,45
+je ntcn
+//original code
+cmp eax,44
+ja 0040B3D4
+jmp 00409498
+
+ntcid:
+cmp dword ptr[ebp+0C],02 //args
+jne 0040B3D4
+add ebx,04
+push ebx //charid
+call 0051BA99 //ps_game.atoi
+mov ecx,eax //eax = charid
+add esp,04
+test ecx,ecx
+je ntcid_fail
+
+push ecx //charid
+call 00414CC0 //CWorld::FindUser
+mov esi,eax
+test esi,esi
+je ntcid_fail
+
+mov eax,[ebx+100] //notice
+cmp eax,80
+ja ntcid_fail
+
+lea edx,[ebx+104]
+sub esp,100
+mov edi,esp
+mov edi,edx
+mov word ptr[esp],F90B
+mov byte ptr[esp+02],al
+xor edi,edi
+
+ntcid_str_len:
+cmp edi,eax
+je ntcid_str_end
+mov ecx,[edx+edi]
+mov [esp+edi+03],ecx
+inc ecx
+inc edi
+jmp ntcid_str_len
+
+ntcid_str_end:
+mov edx,esp
+add eax,03
+mov ecx,esi //user = esi
+push eax //packet length
+push edx //packet data
+call 004ED0E0 //SConnection::Send
+add esp,100
+mov eax,[esp+3C]
+push ntcid_sent
+push eax
+call 0051A8CD //ps_game.sprintf
+add esp,08
+jmp 0040B3D4
+
+ntcid_fail:
+push ebx
+push ntcid_error
+push edi
+call 0051A8CD //ps_game.sprintf
+add esp,0C
+jmp 0040B3D4
+
+ntcn:
+cmp dword ptr[ebp+0C],02 //args
+jne 0040B3D4
+add ebx,04
+mov eax,ebx //ebx = charname
+call 00414CE0 //unidentified
+mov esi,eax
+test esi,esi
+je ntcn_fail
+
+mov eax,[ebx+100] //notice
+cmp eax,80
+ja ntcn_fail
+
+lea edx,[ebx+104]
+sub esp,100
+mov edi,esp
+mov edi,edx
+mov word ptr[esp],F90B
+mov byte ptr[esp+02],al
+xor edi,edi
+
+ntcn_str_len:
+cmp edi,eax
+je ntcn_str_end
+mov ecx,[edx+edi]
+mov [esp+edi+03],ecx
+inc ecx
+inc edi
+jmp ntcn_str_len
+
+ntcn_str_end:
+mov edx,esp
+add eax,03
+mov ecx,esi //user = esi
+push eax //packet length
+push edx //packet data
+call 004ED0E0 //SConnection::Send
+add esp,100
+
+mov eax,[esp+3C]
+push ntcn_sent
+push eax
+call 0051A8CD //ps_game.sprintf
+add esp,08
+jmp 0040B3D4
+
+ntcn_fail:
+push ebx
+push ntcn_error
+push edi
+call 0051A8CD //ps_game.sprintf
+add esp,0C
+jmp 0040B3D4
+
+
+ntcid_error:
+db 'cmd send notice by char id(%s) failed',0
+
+ntcn_error:
+db 'cmd send notice by char name(%s) failed',0
+
+ntcid_sent:
+db 'cmd send notice by char id ok!',0
+
+ntcn_sent:
+db 'cmd send notice by char name ok!',0
+
+0040948F:
+jmp notice_hook
+
+[DISABLE]
+dealloc(notice_hook)
+dealloc(ntcid_error)
+dealloc(ntcn_error)
+dealloc(ntcid_sent)
+dealloc(ntcn_sent)
+0040948F:
+cmp eax,44
+ja 0040B3D4

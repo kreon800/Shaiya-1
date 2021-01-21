@@ -1,0 +1,34 @@
+[ENABLE]
+alloc(notice_error,128)
+alloc(error_output,32)
+//hooks CServerApp::OnConsoleCommand
+notice_error:
+mov eax,[0109E6F8]
+cmp eax,00 //users
+je send_error
+mov edi,[ebx]
+cmp edi,80 //length
+ja send_error
+lea edx,[ebx+04]
+jmp 004097C0
+
+send_error:
+mov eax,[esp+3C]
+push error_output
+push eax
+call 0051A8CD //ps_game.sprintf
+add esp,08
+jmp 0040B3D4
+
+error_output:
+db 'cmd send notice failed',0
+
+004097BB:
+jmp notice_error
+
+[DISABLE]
+dealloc(notice_error)
+dealloc(error_output)
+004097BB:
+mov edi,[ebx]
+lea edx,[ebx+04]
